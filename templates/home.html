@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>django-codecompare</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1e293b; --border: #334155;
+      --text: #e2e8f0; --muted: #64748b; --subtle: #94a3b8;
+      --accent: #6366f1; --green: #34d399; --blue: #60a5fa;
+      --yellow: #fbbf24; --red: #f87171;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Layout */
+    .page { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem 6rem; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 4rem; }
+    .badge { display: inline-flex; gap: 0.5rem; align-items: center; background: var(--surface); border: 1px solid var(--border); color: var(--subtle); font-size: 0.72rem; padding: 0.3rem 0.85rem; border-radius: 9999px; margin-bottom: 1.5rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .badge span { color: var(--green); }
+    h1 { font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 1rem; }
+    .subtitle { color: var(--subtle); font-size: 1.05rem; max-width: 560px; margin: 0 auto; }
+
+    /* Section */
+    .section { margin-bottom: 3rem; }
+    .section-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+
+    /* Install steps */
+    .steps { display: flex; flex-direction: column; gap: 1rem; }
+    .step { display: flex; gap: 1rem; align-items: flex-start; }
+    .step-num { flex-shrink: 0; width: 1.6rem; height: 1.6rem; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; margin-top: 0.15rem; }
+    .step-body { flex: 1; }
+    .step-label { font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 0.35rem; }
+
+    /* Code blocks */
+    pre { background: #0a0e16; border: 1px solid var(--border); border-radius: 0.6rem; padding: 1rem 1.25rem; font-family: "Fira Code", "Cascadia Code", Consolas, monospace; font-size: 0.8rem; overflow-x: auto; line-height: 1.7; }
+    .comment { color: #4b5563; }
+    .key { color: #a5b4fc; }
+    .str { color: #86efac; }
+    .num { color: #fbbf24; }
+    .kw { color: #f472b6; }
+    .fn { color: #60a5fa; }
+    .tag { color: #fb923c; }
+    .inline-code { background: #1e293b; border: 1px solid var(--border); border-radius: 0.3rem; padding: 0.1rem 0.4rem; font-family: monospace; font-size: 0.82rem; color: #a5b4fc; }
+
+    /* Endpoint cards */
+    .endpoint-card { background: var(--surface); border: 1px solid var(--border); border-radius: 0.75rem; margin-bottom: 1.5rem; overflow: hidden; }
+    .endpoint-header { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+    .method { font-size: 0.68rem; font-weight: 800; padding: 0.2rem 0.6rem; border-radius: 0.3rem; letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
+    .post { background: #1e3a5f; color: var(--blue); }
+    .get  { background: #064e3b; color: var(--green); }
+    .path { font-family: monospace; font-size: 0.9rem; color: #a5b4fc; font-weight: 600; }
+    .endpoint-desc { color: var(--subtle); font-size: 0.85rem; margin-left: auto; }
+    .endpoint-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .sub-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+
+    /* Fields table */
+    .fields { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .fields th { text-align: left; color: var(--muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .fields td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #1a2335; vertical-align: top; }
+    .fields tr:last-child td { border-bottom: none; }
+    .field-name { font-family: monospace; color: #a5b4fc; white-space: nowrap; }
+    .field-type { color: var(--yellow); font-family: monospace; font-size: 0.75rem; white-space: nowrap; }
+    .req { color: var(--red); font-size: 0.68rem; font-weight: 700; }
+    .opt { color: var(--muted); font-size: 0.68rem; }
+    .field-desc { color: var(--subtle); }
+
+    /* Two-col layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } h1 { font-size: 2rem; } }
+
+    /* Response tree */
+    .resp-group { margin-bottom: 0.75rem; }
+    .resp-group-title { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.4rem; }
+    .resp-fields { display: flex; flex-direction: column; gap: 0.25rem; }
+    .rf { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.8rem; padding: 0.2rem 0; }
+    .rf-name { font-family: monospace; color: #a5b4fc; min-width: 200px; flex-shrink: 0; }
+    .rf-type { font-family: monospace; color: var(--yellow); font-size: 0.73rem; min-width: 60px; flex-shrink: 0; }
+    .rf-desc { color: var(--subtle); font-size: 0.78rem; }
+
+    /* Footer */
+    .footer { text-align: center; color: var(--muted); font-size: 0.78rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">v1.0.0 &bull; MIT &bull; <span>Python {{ python_version }}</span> &bull; Django {{ django_version }}</div>
+    <h1>django-codecompare</h1>
+    <p class="subtitle">Stateless Django library for code diff, similarity scoring, and plagiarism detection. No database required for comparison — just POST and get results.</p>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="section">
+    <div class="section-title">Django Library — O'rnatish</div>
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">Paketni o'rnating</div>
+          <pre><span class="fn">pip</span> install django-codecompare</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label"><span class="inline-code">settings.py</span> ga qo'shing</div>
+          <pre><span class="comment"># settings.py</span>
+<span class="key">INSTALLED_APPS</span> = [
+    <span class="comment"># ... boshqa applar ...</span>
+    <span class="str">"rest_framework"</span>,
+    <span class="str">"corsheaders"</span>,
+    <span class="str">"codecompare"</span>,    <span class="comment"># &lt;-- shu</span>
+]
+
+<span class="key">MIDDLEWARE</span> = [
+    <span class="str">"corsheaders.middleware.CorsMiddleware"</span>,  <span class="comment"># &lt;-- birinchi bo'lishi kerak</span>
+    <span class="comment"># ... qolgan middleware lar ...</span>
+]
+
+<span class="comment"># CORS (kerak bo'lsa)</span>
+<span class="key">CORS_ALLOW_ALL_ORIGINS</span> = <span class="kw">True</span>   <span class="comment"># yoki CORS_ALLOWED_ORIGINS = [...]</span></pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label"><span class="inline-code">urls.py</span> ga qo'shing</div>
+          <pre><span class="comment"># urls.py</span>
+<span class="kw">from</span> django.urls <span class="kw">import</span> path, include
+
+urlpatterns = [
+    <span class="comment"># ... boshqa URL lar ...</span>
+    path(<span class="str">"api/"</span>, include(<span class="str">"codecompare.api.urls"</span>, namespace=<span class="str">"codecompare"</span>)),
+]</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-label">Python kodida to'g'ridan-to'g'ri ishlatish (API siz)</div>
+          <pre><span class="kw">from</span> codecompare.core.services <span class="kw">import</span> ComparisonService
+
+svc = ComparisonService()
+result = svc.compare(
+    old_code=<span class="str">"def add(a, b): return a + b"</span>,
+    new_code=<span class="str">"def sum(x, y): return x + y"</span>,
+    language=<span class="str">"python"</span>,
+)
+
+<span class="fn">print</span>(result.similarity.overall)          <span class="comment"># 62.5</span>
+<span class="fn">print</span>(result.plagiarism.is_plagiarism_suspected)  <span class="comment"># True/False</span>
+<span class="fn">print</span>(result.plagiarism.confidence)       <span class="comment"># 87.3</span>
+<span class="fn">print</span>(result.statistics.renamed_symbols)  <span class="comment"># [{"old_name":"add","new_name":"sum",...}]</span></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Endpoints -->
+  <div class="section">
+    <div class="section-title">API Endpoints</div>
+
+    <!-- POST /api/compare/ -->
+    <div class="endpoint-card">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/api/compare/</span>
+        <span class="endpoint-desc">Ikki kod parchasi taqqoslanadi</span>
+      </div>
+      <div class="endpoint-body">
+
+        <div>
+          <div class="sub-title">So'rov (Request) — Content-Type: application/json</div>
+          <table class="fields">
+            <thead><tr><th>Maydon</th><th>Tur</th><th>Holat</th><th>Tavsif</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">old_code</td><td class="field-type">string</td><td><span class="req">required</span></td><td class="field-desc">Asl (eski) kod matni</td></tr>
+              <tr><td class="field-name">new_code</td><td class="field-type">string</td><td><span class="req">required</span></td><td class="field-desc">Yangi (o'zgartirilgan) kod matni</td></tr>
+              <tr><td class="field-name">language</td><td class="field-type">string</td><td><span class="opt">optional</span></td><td class="field-desc">Dasturlash tili: <span class="inline-code">python</span>, <span class="inline-code">javascript</span>, <span class="inline-code">java</span>, <span class="inline-code">go</span> ... Yo'q qoldirilsa avtomatik aniqlanadi.</td></tr>
+              <tr><td class="field-name">options</td><td class="field-type">object</td><td><span class="opt">optional</span></td><td class="field-desc">Qo'shimcha sozlamalar. <span class="inline-code">{"warnings": false}</span> — ogohlantirishlarni o'chirish</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="sub-title">Misol so'rov</div>
+            <pre><span class="fn">curl</span> -X POST http://localhost:8000/api/compare/ \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "old_code": "def add(a, b):\n    return a + b",
+    "new_code": "def sum(x, y):\n    return x + y",
+    "language": "python"
+  }'</span></pre>
+          </div>
+          <div>
+            <div class="sub-title">Python requests bilan</div>
+            <pre><span class="kw">import</span> requests
+
+r = requests.post(
+    <span class="str">"http://localhost:8000/api/compare/"</span>,
+    json={
+        <span class="str">"old_code"</span>: old,
+        <span class="str">"new_code"</span>: new,
+        <span class="str">"language"</span>: <span class="str">"python"</span>,
+    }
+)
+data = r.json()</pre>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">Javob (Response) — HTTP 200</div>
+          <div class="resp-group">
+            <div class="resp-group-title">similarity — O'xshashlik ko'rsatkichlari (%)</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">similarity.overall</span><span class="rf-type">float</span><span class="rf-desc">Umumiy o'xshashlik — barcha usullar o'rtacha qiymati</span></div>
+              <div class="rf"><span class="rf-name">similarity.exact</span><span class="rf-type">float</span><span class="rf-desc">Belma-bel to'liq moslik (Jaccard)</span></div>
+              <div class="rf"><span class="rf-name">similarity.token</span><span class="rf-type">float</span><span class="rf-desc">Token darajasidagi o'xshashlik</span></div>
+              <div class="rf"><span class="rf-name">similarity.levenshtein</span><span class="rf-type">float</span><span class="rf-desc">Levenshtein/Wagner-Fischer masofasi</span></div>
+              <div class="rf"><span class="rf-name">similarity.cosine</span><span class="rf-type">float</span><span class="rf-desc">TF-IDF cosine o'xshashlik</span></div>
+              <div class="rf"><span class="rf-name">similarity.ast</span><span class="rf-type">float</span><span class="rf-desc">Sintaksis daraxt (AST) tuzilmaviy o'xshashlik</span></div>
+              <div class="rf"><span class="rf-name">similarity.semantic</span><span class="rf-type">float</span><span class="rf-desc">Winnowing fingerprint orqali semantik o'xshashlik</span></div>
+            </div>
+          </div>
+          <div class="resp-group">
+            <div class="resp-group-title">plagiarism — Ko'chirmachilik ko'rsatkichlari</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">plagiarism.is_plagiarism_suspected</span><span class="rf-type">bool</span><span class="rf-desc">Ko'chirmachilik gumonlanadimi? (confidence &gt; 70% bo'lsa true)</span></div>
+              <div class="rf"><span class="rf-name">plagiarism.confidence</span><span class="rf-type">float</span><span class="rf-desc">Ko'chirmachilik ehtimoli (0–100%)</span></div>
+              <div class="rf"><span class="rf-name">plagiarism.renamed_identifiers</span><span class="rf-type">list</span><span class="rf-desc">Qayta nomlangan o'zgaruvchi/funksiyalar: <span class="inline-code">[{"old_name","new_name","confidence"}]</span></span></div>
+              <div class="rf"><span class="rf-name">plagiarism.structural_fingerprint_match</span><span class="rf-type">float</span><span class="rf-desc">Kod tuzilmasi (fingerprint) mos kelish foizi</span></div>
+              <div class="rf"><span class="rf-name">plagiarism.whitespace_stripped_similarity</span><span class="rf-type">float</span><span class="rf-desc">Bo'shliqlar olib tashlanganda o'xshashlik</span></div>
+            </div>
+          </div>
+          <div class="resp-group">
+            <div class="resp-group-title">statistics — O'zgarish statistikasi</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">statistics.lines_added</span><span class="rf-type">int</span><span class="rf-desc">Qo'shilgan qatorlar soni</span></div>
+              <div class="rf"><span class="rf-name">statistics.lines_removed</span><span class="rf-type">int</span><span class="rf-desc">O'chirilgan qatorlar soni</span></div>
+              <div class="rf"><span class="rf-name">statistics.functions_added</span><span class="rf-type">list</span><span class="rf-desc">Yangi qo'shilgan funksiyalar nomlari</span></div>
+              <div class="rf"><span class="rf-name">statistics.functions_removed</span><span class="rf-type">list</span><span class="rf-desc">O'chirilgan funksiyalar nomlari</span></div>
+              <div class="rf"><span class="rf-name">statistics.renamed_symbols</span><span class="rf-type">list</span><span class="rf-desc">Qayta nomlangan simbollar: <span class="inline-code">[{"old_name","new_name","confidence"}]</span></span></div>
+              <div class="rf"><span class="rf-name">statistics.complexity_delta</span><span class="rf-type">int</span><span class="rf-desc">Siklik murakkablik o'zgarishi (+ yoki -)</span></div>
+            </div>
+          </div>
+          <div class="resp-group">
+            <div class="resp-group-title">diff — Qator farqlari (Myers algoritmi)</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">diff.added</span><span class="rf-type">int</span><span class="rf-desc">Jami qo'shilgan qatorlar</span></div>
+              <div class="rf"><span class="rf-name">diff.removed</span><span class="rf-type">int</span><span class="rf-desc">Jami o'chirilgan qatorlar</span></div>
+              <div class="rf"><span class="rf-name">diff.chunks[]</span><span class="rf-type">list</span><span class="rf-desc">Unified diff bo'laklari (git diff formatiga o'xshash)</span></div>
+              <div class="rf"><span class="rf-name">diff.chunks[].header</span><span class="rf-type">string</span><span class="rf-desc">Misol: <span class="inline-code">@@ -2,1 +2,1 @@</span></span></div>
+              <div class="rf"><span class="rf-name">diff.chunks[].lines[].change_type</span><span class="rf-type">string</span><span class="rf-desc"><span class="inline-code">equal</span> | <span class="inline-code">insert</span> | <span class="inline-code">delete</span></span></div>
+            </div>
+          </div>
+          <div class="resp-group">
+            <div class="resp-group-title">old_complexity / new_complexity — Kod murakkabligi</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">*.cyclomatic</span><span class="rf-type">int</span><span class="rf-desc">Siklik murakkablik (McCabe) — past bo'lsa yaxshi (&lt;10)</span></div>
+              <div class="rf"><span class="rf-name">*.maintainability_index</span><span class="rf-type">float</span><span class="rf-desc">Saqlanish indeksi 0–100 (yuqori = yaxshi, &lt;20 = muammo)</span></div>
+              <div class="rf"><span class="rf-name">*.halstead_volume</span><span class="rf-type">float</span><span class="rf-desc">Halstead hajmi — kod axborot miqdori</span></div>
+              <div class="rf"><span class="rf-name">*.lines_of_code</span><span class="rf-type">int</span><span class="rf-desc">Jami kod qatorlari (LOC)</span></div>
+            </div>
+          </div>
+          <div class="resp-group">
+            <div class="resp-group-title">Boshqa maydonlar</div>
+            <div class="resp-fields">
+              <div class="rf"><span class="rf-name">language</span><span class="rf-type">string</span><span class="rf-desc">Aniqlangan yoki ko'rsatilgan dasturlash tili</span></div>
+              <div class="rf"><span class="rf-name">warnings</span><span class="rf-type">list</span><span class="rf-desc">Ogohlantirishlar: ko'chirmachilik, yuqori murakkablik, past saqlanish</span></div>
+              <div class="rf"><span class="rf-name">metadata.old_hash</span><span class="rf-type">string</span><span class="rf-desc">Eski kod SHA-256 heshi (16 belgi)</span></div>
+              <div class="rf"><span class="rf-name">metadata.new_hash</span><span class="rf-type">string</span><span class="rf-desc">Yangi kod SHA-256 heshi (16 belgi)</span></div>
+              <div class="rf"><span class="rf-name">processing_time_ms</span><span class="rf-type">float</span><span class="rf-desc">Qayta ishlash vaqti (millisekund)</span></div>
+            </div>
+          </div>
+
+          <div class="sub-title" style="margin-top:0.75rem;">Misol javob</div>
+          <pre>{
+  <span class="key">"language"</span>: <span class="str">"python"</span>,
+  <span class="key">"similarity"</span>: {
+    <span class="key">"overall"</span>: <span class="num">62.5</span>,      <span class="comment">// umumiy o'xshashlik %</span>
+    <span class="key">"token"</span>: <span class="num">76.9</span>,       <span class="comment">// token o'xshashlik %</span>
+    <span class="key">"levenshtein"</span>: <span class="num">68.0</span>,  <span class="comment">// belma-bel masofa %</span>
+    <span class="key">"ast"</span>: <span class="num">60.0</span>,          <span class="comment">// AST tuzilmaviy %</span>
+    <span class="comment">// ... exact, semantic, structural, logic, jaccard, cosine</span>
+  },
+  <span class="key">"plagiarism"</span>: {
+    <span class="key">"is_plagiarism_suspected"</span>: <span class="kw">true</span>,
+    <span class="key">"confidence"</span>: <span class="num">87.3</span>,
+    <span class="key">"renamed_identifiers"</span>: [
+      { <span class="key">"old_name"</span>: <span class="str">"add"</span>, <span class="key">"new_name"</span>: <span class="str">"sum"</span>, <span class="key">"confidence"</span>: <span class="num">75.4</span> },
+      { <span class="key">"old_name"</span>: <span class="str">"a"</span>,   <span class="key">"new_name"</span>: <span class="str">"x"</span>,   <span class="key">"confidence"</span>: <span class="num">60.0</span> }
+    ],
+    <span class="key">"structural_fingerprint_match"</span>: <span class="num">100.0</span>
+  },
+  <span class="key">"statistics"</span>: {
+    <span class="key">"lines_added"</span>: <span class="num">2</span>, <span class="key">"lines_removed"</span>: <span class="num">2</span>, <span class="key">"lines_equal"</span>: <span class="num">0</span>,
+    <span class="key">"functions_added"</span>: [<span class="str">"sum"</span>], <span class="key">"functions_removed"</span>: [<span class="str">"add"</span>],
+    <span class="key">"renamed_symbols"</span>: [{ <span class="key">"old_name"</span>: <span class="str">"add"</span>, <span class="key">"new_name"</span>: <span class="str">"sum"</span>, <span class="key">"confidence"</span>: <span class="num">75.4</span> }]
+  },
+  <span class="key">"diff"</span>: {
+    <span class="key">"added"</span>: <span class="num">2</span>, <span class="key">"removed"</span>: <span class="num">2</span>, <span class="key">"equal"</span>: <span class="num">0</span>,
+    <span class="key">"chunks"</span>: [{
+      <span class="key">"header"</span>: <span class="str">"@@ -1,2 +1,2 @@"</span>,
+      <span class="key">"lines"</span>: [
+        { <span class="key">"old_no"</span>: <span class="num">1</span>, <span class="key">"new_no"</span>: <span class="kw">null</span>, <span class="key">"content"</span>: <span class="str">"def add(a, b):"</span>, <span class="key">"change_type"</span>: <span class="str">"delete"</span> },
+        { <span class="key">"old_no"</span>: <span class="kw">null</span>, <span class="key">"new_no"</span>: <span class="num">1</span>, <span class="key">"content"</span>: <span class="str">"def sum(x, y):"</span>, <span class="key">"change_type"</span>: <span class="str">"insert"</span> }
+      ]
+    }]
+  },
+  <span class="key">"old_complexity"</span>: { <span class="key">"cyclomatic"</span>: <span class="num">1</span>, <span class="key">"maintainability_index"</span>: <span class="num">85.8</span>, <span class="key">"lines_of_code"</span>: <span class="num">2</span> },
+  <span class="key">"new_complexity"</span>: { <span class="key">"cyclomatic"</span>: <span class="num">1</span>, <span class="key">"maintainability_index"</span>: <span class="num">85.8</span>, <span class="key">"lines_of_code"</span>: <span class="num">2</span> },
+  <span class="key">"warnings"</span>: [<span class="str">"Plagiarism suspected (87.3% confidence)."</span>],
+  <span class="key">"metadata"</span>: { <span class="key">"old_hash"</span>: <span class="str">"dc5bdaee1b0ea968"</span>, <span class="key">"new_hash"</span>: <span class="str">"2b1e0aead72c38ed"</span> },
+  <span class="key">"processing_time_ms"</span>: <span class="num">2.21</span>
+}</pre>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- POST /api/compare/files/ -->
+    <div class="endpoint-card">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <span class="path">/api/compare/files/</span>
+        <span class="endpoint-desc">Fayl yuklash orqali taqqoslash</span>
+      </div>
+      <div class="endpoint-body">
+
+        <div>
+          <div class="sub-title">So'rov — Content-Type: multipart/form-data</div>
+          <table class="fields">
+            <thead><tr><th>Maydon</th><th>Tur</th><th>Holat</th><th>Tavsif</th></tr></thead>
+            <tbody>
+              <tr><td class="field-name">old_file</td><td class="field-type">file</td><td><span class="req">required</span></td><td class="field-desc">Asl fayl (istalgan matnli kod fayli)</td></tr>
+              <tr><td class="field-name">new_file</td><td class="field-type">file</td><td><span class="req">required</span></td><td class="field-desc">Yangi fayl</td></tr>
+              <tr><td class="field-name">language</td><td class="field-type">string</td><td><span class="opt">optional</span></td><td class="field-desc">Til (yo'q qolsa fayl kengaytmasidan aniqlanadi)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="sub-title">curl bilan</div>
+            <pre><span class="fn">curl</span> -X POST http://localhost:8000/api/compare/files/ \
+  -F <span class="str">"old_file=@original.py"</span> \
+  -F <span class="str">"new_file=@submitted.py"</span></pre>
+          </div>
+          <div>
+            <div class="sub-title">Python requests bilan</div>
+            <pre><span class="kw">import</span> requests
+
+r = requests.post(
+    <span class="str">"http://localhost:8000/api/compare/files/"</span>,
+    files={
+        <span class="str">"old_file"</span>: open(<span class="str">"original.py"</span>, <span class="str">"rb"</span>),
+        <span class="str">"new_file"</span>: open(<span class="str">"submitted.py"</span>, <span class="str">"rb"</span>),
+    }
+)</pre>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">Javob</div>
+          <p style="font-size:0.83rem;color:var(--subtle);">
+            <span class="inline-code">POST /api/compare/</span> bilan bir xil JSON javob qaytaradi — barcha <span class="inline-code">similarity</span>, <span class="inline-code">plagiarism</span>, <span class="inline-code">diff</span>, <span class="inline-code">statistics</span> maydonlari.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GET /api/languages/ -->
+    <div class="endpoint-card">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <span class="path">/api/languages/</span>
+        <span class="endpoint-desc">Qo'llab-quvvatlanadigan tillar ro'yxati</span>
+      </div>
+      <div class="endpoint-body">
+
+        <div class="two-col">
+          <div>
+            <div class="sub-title">So'rov</div>
+            <pre><span class="fn">curl</span> http://localhost:8000/api/languages/</pre>
+          </div>
+          <div>
+            <div class="sub-title">Javob</div>
+            <pre>{
+  <span class="key">"languages"</span>: [
+    { <span class="key">"id"</span>: <span class="str">"python"</span>,     <span class="key">"name"</span>: <span class="str">"Python"</span> },
+    { <span class="key">"id"</span>: <span class="str">"javascript"</span>, <span class="key">"name"</span>: <span class="str">"Javascript"</span> },
+    { <span class="key">"id"</span>: <span class="str">"java"</span>,       <span class="key">"name"</span>: <span class="str">"Java"</span> },
+    <span class="comment">// ... jami 22 ta til</span>
+  ]
+}</pre>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-title">Qo'llab-quvvatlanadigan 22 ta til</div>
+          <pre><span class="str">python</span>  <span class="str">javascript</span>  <span class="str">typescript</span>  <span class="str">java</span>  <span class="str">c</span>  <span class="str">cpp</span>  <span class="str">csharp</span>  <span class="str">go</span>  <span class="str">rust</span>  <span class="str">kotlin</span>
+<span class="str">swift</span>   <span class="str">dart</span>        <span class="str">ruby</span>        <span class="str">scala</span>  <span class="str">bash</span>  <span class="str">sql</span>  <span class="str">html</span>  <span class="str">css</span>  <span class="str">php</span>  <span class="str">vue</span>  <span class="str">jsx</span>  <span class="str">tsx</span></pre>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Error responses -->
+  <div class="section">
+    <div class="section-title">Xato javoblar</div>
+    <div class="endpoint-card">
+      <div class="endpoint-body">
+        <table class="fields">
+          <thead><tr><th>HTTP Kod</th><th>error</th><th>Sabab</th></tr></thead>
+          <tbody>
+            <tr><td class="field-type">400</td><td class="field-name">MISSING_FIELDS</td><td class="field-desc"><span class="inline-code">old_code</span> yoki <span class="inline-code">new_code</span> jo'natilmagan</td></tr>
+            <tr><td class="field-type">400</td><td class="field-name">FILE_SIZE_LIMIT</td><td class="field-desc">Fayl 100MB dan oshib ketdi</td></tr>
+            <tr><td class="field-type">400</td><td class="field-name">SECURITY_ERROR</td><td class="field-desc">Fayl xavfsizlik tekshiruvidan o'tmadi</td></tr>
+            <tr><td class="field-type">422</td><td class="field-name">PARSE_ERROR</td><td class="field-desc">Kod parse qilinmadi</td></tr>
+            <tr><td class="field-type">429</td><td class="field-name">—</td><td class="field-desc">Rate limit: 120 so'rov/daqiqa (anonim)</td></tr>
+            <tr><td class="field-type">500</td><td class="field-name">INTERNAL_ERROR</td><td class="field-desc">Ichki xato</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    django-codecompare &bull; Python {{ python_version }} &bull; Django {{ django_version }} &bull;
+    <a href="https://github.com/shoyim/django-codecompare">GitHub</a>
+  </div>
+
+</div>
+</body>
+</html>
