@@ -58,18 +58,18 @@ class TestCompareService:
 
     def test_diff_stats_present(self):
         result = compare(CODE_A, CODE_B, language="python")
-        s = result.stats
+        s = result.statistics
         assert s.lines_added >= 0 and s.lines_removed >= 0
 
     def test_complexity_metrics_present(self):
         result = compare(CODE_A, CODE_B, language="python")
-        assert result.complexity_old is not None
-        assert result.complexity_new is not None
+        assert result.old_complexity is not None
+        assert result.new_complexity is not None
 
     def test_plagiarism_indicators_present(self):
         result = compare(CODE_A, CODE_B, language="python")
         assert result.plagiarism is not None
-        assert 0.0 <= result.plagiarism.score <= 1.0
+        assert 0.0 <= result.plagiarism.confidence <= 100.0
 
     def test_empty_vs_nonempty(self):
         result = compare(EMPTY, CODE_A, language="python")
@@ -89,7 +89,7 @@ class TestCompareService:
 
     def test_renamed_symbols_list(self):
         result = compare(CODE_A, CODE_B, language="python")
-        assert isinstance(result.renamed_symbols, list)
+        assert isinstance(result.statistics.renamed_symbols, list)
 
     def test_processing_time_positive(self):
         result = compare(CODE_A, CODE_B, language="python")
@@ -104,4 +104,7 @@ class TestLanguageAutoDetect:
     def test_js_auto_detect(self):
         js = "function add(a, b) { return a + b; }\nconst x = 1;\n"
         result = compare(js, js)
-        assert result.language in (Language.JAVASCRIPT, Language.TYPESCRIPT, Language.JSX, Language.TSX, Language.PYTHON)
+        assert result.language in (
+            Language.JAVASCRIPT, Language.TYPESCRIPT,
+            Language.JSX, Language.TSX, Language.PYTHON,
+        )
