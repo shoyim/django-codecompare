@@ -9,8 +9,25 @@ description = "Production-grade Django package for code diff, similarity, and pl
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-authors = [{name = "CodeCompare Team"}]
-keywords = ["django", "diff", "code-comparison", "plagiarism", "ast", "similarity"]
+authors = [{name = "Shoyim Obloqulov", email = "obloqulovshoyim1@gmail.com"}]
+maintainers = [{name = "Shoyim Obloqulov", email = "obloqulovshoyim1@gmail.com"}]
+keywords = ["django", "diff", "code-comparison", "plagiarism", "ast", "similarity", "myers-diff", "levenshtein"]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Version Control",
+    "Topic :: Text Processing :: General",
+    "Framework :: Django",
+    "Framework :: Django :: 5.0",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 
 dependencies = [
     "Django>=5.0,<6.0",
@@ -19,11 +36,45 @@ dependencies = [
     "click>=8.1",
 ]
 
+[project.optional-dependencies]
+websocket = [
+    "channels>=4.1",
+    "channels-redis>=4.2",
+    "daphne>=4.1",
+]
+async = [
+    "celery>=5.4",
+    "redis>=5.0",
+    "django-redis>=5.4",
+]
+postgres = [
+    "psycopg2-binary>=2.9",
+]
+all = [
+    "channels>=4.1",
+    "channels-redis>=4.2",
+    "daphne>=4.1",
+    "celery>=5.4",
+    "redis>=5.0",
+    "django-redis>=5.4",
+    "psycopg2-binary>=2.9",
+    "uvicorn[standard]>=0.29",
+]
+
+[project.urls]
+Homepage = "https://github.com/shoyim/django-codecompare"
+Repository = "https://github.com/shoyim/django-codecompare"
+"Bug Tracker" = "https://github.com/shoyim/django-codecompare/issues"
+Changelog = "https://github.com/shoyim/django-codecompare/releases"
+
 [project.scripts]
 codecompare = "codecompare.cli.commands:main"
 
 [tool.setuptools.packages.find]
 include = ["codecompare*"]
+
+[tool.setuptools.package-data]
+codecompare = ["py.typed"]
 
 [tool.ruff]
 line-length = 100
@@ -43,3 +94,8 @@ addopts = ["--strict-markers", "--tb=short"]
 [tool.coverage.run]
 source = ["codecompare"]
 omit = ["*/migrations/*", "*/tests/*"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
